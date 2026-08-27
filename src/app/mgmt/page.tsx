@@ -7,6 +7,7 @@ import { getCurrentUser } from '@/lib/auth';
 export const dynamic = 'force-dynamic';
 
 export default async function ManagementPage() {
+  if (!process.env.DATABASE_URL) return <main className="access-page"><div className="access-card"><p className="eyebrow">Management workspace</p><h1>Database not configured</h1><p className="muted">Add DATABASE_URL to the Vercel project environment variables, then redeploy this application.</p></div></main>;
   const user = await getCurrentUser();
   const displayName = user?.fullName ?? 'MGMT';
   const [employees, shifts, orders, pending] = await Promise.all([

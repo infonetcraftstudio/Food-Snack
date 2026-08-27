@@ -90,3 +90,5 @@ The Admin workspace at `/Admin` can create, edit, and delete shifts, and create,
 ## Production notes
 
 Set a long random `AUTH_SECRET`, use a managed PostgreSQL datasource for deployment, run migrations through the deployment pipeline, configure the company timezone, and replace the development passwords before allowing real access.
+
+Vercel must have `DATABASE_URL`, `AUTH_SECRET`, `ADMIN_PAGE_PASSWORD`, `MANAGEMENT_PAGE_PASSWORD`, and `COLLECTION_PAGE_PASSWORD` configured under Project Settings > Environment Variables. The local SQLite database is for development only and is not persistent on Vercel.
