@@ -1,0 +1,196 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  EMPLOYEE
+  MANAGEMENT
+  ADMIN
+  FOOD_COLLECTION_STAFF
+}
+
+enum ServiceType {
+  FOOD
+  SNACK
+}
+
+enum BookingMode {
+  AUTOMATIC
+  MANUAL
+}
+
+enum OrderStatus {
+  ORDERED
+  CANCELLED
+  EXPIRED
+}
+
+enum CollectionStatus {
+  PENDING
+  COLLECTED
+  NOT_COLLECTED
+}
+
+model User {
+  id             String       @id @default(cuid())
+  employeeId     String       @unique
+  fullName       String
+  username       String?      @unique
+  passwordHash   String
+  department     String?
+  designation    String?
+  role           Role         @default(EMPLOYEE)
+  isActive       Boolean      @default(true)
+  shiftId        String?
+  shift          Shift?       @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+  orders         Order[]
+  auditLogs      AuditLog[]   @relation("AuditActor")
+  collectionLogs CollectionLog[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([role, isActive])
+  @@index([shiftId])
+}
+
+model Shift {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  startTime String
+  endTime   String
+  isActive  Boolean   @default(true)
+  users     User[]
+  services  Service[]
+  orders    Order[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Service {
+  id          String      @id @default(cuid())
+  name        String
+  type        ServiceType
+  shiftId     String
+  shift       Shift       @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  serviceDate DateTime
+  bookingMode BookingMode @default(MANUAL)
+  opensAt     DateTime?
+  closesAt    DateTime?
+  manualOpen  Boolean     @default(false)
+  isActive    Boolean     @default(true)
+  allowEdit   Boolean     @default(true)
+  allowCancel Boolean     @default(true)
+  menuItems   MenuItem[]
+  orders      Order[]
+  overrides   BookingOverride[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([shiftId, serviceDate, isActive])
+}
+
+model MenuItem {
+  id             String    @id @default(cuid())
+  serviceId      String
+  service        Service   @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  name           String
+  description    String?
+  category       ServiceType
+  availableQty   Int       @default(0)
+  orderedQty     Int       @default(0)
+  preparedQty    Int       @default(0)
+  collectedQty   Int       @default(0)
+  notCollectedQty Int      @default(0)
+  remainingQty   Int       @default(0)
+  wastageQty     Int       @default(0)
+  maxPerEmployee Int       @default(1)
+  isActive       Boolean   @default(true)
+  orderItems     OrderItem[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([serviceId, isActive])
+}
+
+model Order {
+  id               String           @id @default(cuid())
+  employeeId       String
+  employee         User             @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  shiftId          String
+  shift            Shift            @relation(fields: [shiftId], references: [id], onDelete: Restrict)
+  serviceId        String
+  service          Service          @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  orderDate        DateTime
+  status           OrderStatus      @default(ORDERED)
+  collectionStatus CollectionStatus @default(PENDING)
+  collectedAt      DateTime?
+  orderItems       OrderItem[]
+  collectionLogs   CollectionLog[]
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@unique([employeeId, serviceId, orderDate])
+  @@index([orderDate, collectionStatus])
+}
+
+model OrderItem {
+  id         String   @id @default(cuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItemId String
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Restrict)
+  quantity   Int
+
+  @@unique([orderId, menuItemId])
+}
+
+model CollectionLog {
+  id         String   @id @default(cuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  employeeId String
+  employee   User     @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  verifiedAt DateTime @default(now())
+  collectedAt DateTime?
+  status     CollectionStatus
+
+  @@index([employeeId, status])
+}
+
+model BookingOverride {
+  id          String   @id @default(cuid())
+  serviceId   String
+  service     Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  action      String
+  reason      String?
+  startsAt    DateTime?
+  endsAt      DateTime?
+  createdById String?
+  createdAt   DateTime @default(now())
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  actorId      String?
+  actor        User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  actorRole    Role?
+  action       String
+  entity       String
+  entityId     String?
+  previousValue String?
+  newValue     String?
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt, entity])
+}
+
+model SystemSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}

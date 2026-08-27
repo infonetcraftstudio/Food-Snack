@@ -1,7 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  experimental: {
+    optimizePackageImports: ["lucide-react"],
+  },
+  async rewrites() {
+    return [{ source: '/Admin', destination: '/admin' }, { source: '/Admin/:path*', destination: '/admin/:path*' }];
+  },
 };
 
 export default nextConfig;
