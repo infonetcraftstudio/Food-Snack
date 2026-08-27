@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
+import { WorkspaceSession } from '@/components/WorkspaceSession';
 import { Activity, ClipboardList, Clock3, Download, LayoutDashboard, LogOut, Settings2, ShieldCheck, Soup, Users, Utensils, ChevronDown } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -30,7 +31,7 @@ export default async function Home() {
   const nav = isEmployee ? ['Overview', 'My orders', 'Order history'] : ['Overview', 'Live operations', 'Services & menus', 'Reports', ...(role === 'ADMIN' ? ['Users & shifts', 'Audit log', 'Settings'] : [])];
 
   return (
-    <main className="app-shell">
+    <><WorkspaceSession area="EMPLOYEE" /><main className="app-shell">
       <aside className="sidebar">
         <div className="sidebar-brand"><div className="brand-mark small"><Utensils size={17} /></div><span>Platewise</span></div>
         <div className="workspace-switch"><span className="workspace-dot" /> Company dining <ChevronDown size={14} /></div>
@@ -42,7 +43,7 @@ export default async function Home() {
         <header className="topbar"><div><p className="eyebrow">{isEmployee ? 'Employee workspace' : 'Operations workspace'}</p><h1>{isEmployee ? `Good morning, ${user.fullName.split(' ')[0]}` : 'Operations overview'}</h1></div><div className="topbar-actions"><span className="status-pill"><span /> System operational</span><button className="icon-button" aria-label="Settings"><Settings2 size={18} /></button></div></header>
         {isEmployee ? <EmployeeView user={user} services={employeeServices} /> : <OperationsView activeEmployees={activeEmployees} activeShifts={activeShifts} todayOrders={todayOrders} pendingCollections={pendingCollections} isAdmin={role === 'ADMIN'} />}
       </section>
-    </main>
+    </main></>
   );
 }
 
