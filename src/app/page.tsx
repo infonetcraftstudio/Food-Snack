@@ -35,7 +35,7 @@ export default async function Home() {
       <aside className="sidebar">
         <div className="sidebar-brand"><div className="brand-mark small"><Utensils size={17} /></div><span>Platewise</span></div>
         <div className="workspace-switch"><span className="workspace-dot" /> Company dining <ChevronDown size={14} /></div>
-        <nav className="nav-list">{nav.map((item, index) => <div key={item} className={`nav-item ${index === 0 ? 'active' : ''}`}><LayoutDashboard size={17} />{item}</div>)}</nav>
+        <nav className="nav-list">{isEmployee ? <><Link href="/" className="nav-item active"><LayoutDashboard size={17} />Overview</Link><Link href="/orders" className="nav-item"><ClipboardList size={17} />My orders</Link><Link href="/orders/history" className="nav-item"><Clock3 size={17} />Order history</Link></> : nav.map((item, index) => <div key={item} className={`nav-item ${index === 0 ? 'active' : ''}`}><LayoutDashboard size={17} />{item}</div>)}</nav>
         {!isEmployee && <div className="sidebar-callout"><p className="eyebrow">Today at a glance</p><strong>{todayOrders} <span>orders</span></strong><small>{pendingCollections} pending collection</small></div>}
         <div className="sidebar-footer"><div className="avatar">{user.fullName.split(' ').map((name) => name[0]).join('').slice(0, 2)}</div><div><strong>{user.fullName}</strong><small>{roleLabel(user.role)}</small></div><form action="/api/auth/logout" method="post"><button aria-label="Sign out"><LogOut size={16} /></button></form></div>
       </aside>

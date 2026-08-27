@@ -6,6 +6,13 @@ import { bookingState } from '@/lib/booking';
 
 const orderSchema = z.object({ serviceId: z.string().min(1), items: z.array(z.object({ menuItemId: z.string().min(1), quantity: z.number().int().min(1).max(50) })).min(1) });
 
+export async function GET() {
+  const session = await getSession();
+  if (!session || session.role !== 'EMPLOYEE' || !session.userId) return NextResponse.json({ error: 'Employee access required.' }, { status: 403 });
+  const orders = await db.order.findMany({ where: { employeeId: session.userId }, include: { service: true, shift: true, orderItems: { include: { menuItem: true } } }, orderBy: { orderDate: 'desc' } });
+  return NextResponse.json({ orders });
+}
+
 export async function POST(request: Request) {
   const session = await getSession();
   if (!session || session.role !== 'EMPLOYEE' || !session.userId) return NextResponse.json({ error: 'Employee access required.' }, { status: 403 });
