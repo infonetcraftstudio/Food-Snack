@@ -32,11 +32,11 @@ export async function PATCH(request: Request) {
   if (!session || session.role !== 'ADMIN') return NextResponse.json({ error: 'Admin access required.' }, { status: 403 });
   const actorId = session.userId;
   try {
-    const input = userSchema.partial().extend({ id: z.string().min(1), password: z.string().min(8).max(128).optional() }).parse(await request.json());
+    const input = userSchema.partial().extend({ id: z.string().min(1), password: z.string().min(8).max(128).optional(), isActive: z.boolean().optional() }).parse(await request.json());
     const previous = await db.user.findUnique({ where: { id: input.id } });
     if (!previous) return NextResponse.json({ error: 'User not found.' }, { status: 404 });
     const { id, password, ...changes } = input;
-    const data = { ...changes, ...(changes.employeeId ? { employeeId: changes.employeeId.toUpperCase() } : {}), ...(password ? { passwordHash: await bcrypt.hash(password, 12) } : {}) };
+    const data = { ...changes, ...(changes.employeeId ? { employeeId: changes.employeeId.toUpperCase() } : {}), ...(password ? { passwordHash: await bcrypt.hash(password, 12) } : {}), ...(typeof changes.isActive === 'boolean' ? { isActive: changes.isActive } : {}) };
     const updated = await db.$transaction(async (tx) => {
       const user = await tx.user.update({ where: { id }, data });
       await tx.auditLog.create({ data: { actorId, actorRole: session.role, action: password ? 'USER_UPDATED_PASSWORD' : 'USER_UPDATED', entity: 'User', entityId: id, previousValue: JSON.stringify({ ...previous, passwordHash: '[redacted]' }), newValue: JSON.stringify({ ...user, passwordHash: password ? '[redacted]' : '[unchanged]' }) } });
@@ -51,10 +51,22 @@ export async function DELETE(request: Request) {
   if (!session || session.role !== 'ADMIN') return NextResponse.json({ error: 'Admin access required.' }, { status: 403 });
   const actorId = session.userId;
   const id = new URL(request.url).searchParams.get('id');
+  const force = new URL(request.url).searchParams.get('force') === 'true';
   if (!id || id === session.userId) return NextResponse.json({ error: 'A valid user other than your own account is required.' }, { status: 400 });
   try {
     const previous = await db.user.findUnique({ where: { id } });
     if (!previous) return NextResponse.json({ error: 'User not found.' }, { status: 404 });
+    if (force) {
+      // Hard delete
+      try {
+        await db.$transaction(async (tx) => {
+          await tx.user.delete({ where: { id } });
+          await tx.auditLog.create({ data: { actorId, actorRole: session.role, action: 'USER_DELETED', entity: 'User', entityId: id, previousValue: JSON.stringify({ ...previous, passwordHash: '[redacted]' }), newValue: null } });
+        });
+        return NextResponse.json({ ok: true });
+      } catch { return NextResponse.json({ error: 'User could not be removed. Ensure there are no dependent records.' }, { status: 409 }); }
+    }
+    // Soft-delete / deactivate
     await db.$transaction(async (tx) => {
       await tx.user.update({ where: { id }, data: { isActive: false } });
       await tx.auditLog.create({ data: { actorId, actorRole: session.role, action: 'USER_DEACTIVATED', entity: 'User', entityId: id, previousValue: JSON.stringify({ ...previous, passwordHash: '[redacted]' }), newValue: JSON.stringify({ isActive: false }) } });
